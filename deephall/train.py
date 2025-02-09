@@ -54,7 +54,7 @@ def init_guess(key: PRNGKey, batch: int, nelec: int):
     return jnp.stack([theta, phi], axis=-1)
 
 
-def initalize_state(cfg: Config, model: nn.Module):
+def initialize_state(cfg: Config, model: nn.Module):
     key_data, key_params = jax.random.split(jax.random.PRNGKey(cfg.seed))
     data = init_guess(key_data, cfg.batch_size, sum(cfg.system.nspins))
     data = data.reshape((jax.device_count(), -1, *data.shape[-2:]))
@@ -77,9 +77,7 @@ def setup_mcmc(cfg: Config, network: LogPsiNetwork):
     return pmap_mcmc_step, pmoves
 
 
-def train(cfg: Config):
-    init_logging()
-    log_manager = LogManager(cfg)
+def train_loop(cfg: Config, log_manager: LogManager):
     model = make_network(cfg.system, cfg.network)
     network = cast(LogPsiNetwork, model.apply)
     pmap_mcmc_step, pmoves = setup_mcmc(cfg, network)
@@ -88,7 +86,7 @@ def train(cfg: Config):
     key = jax.random.PRNGKey(cfg.seed)
     sharded_key = kfac_jax.utils.make_different_rng_key_on_all_devices(key)
     initial_step, (params, data, opt_state, mcmc_width) = (
-        log_manager.try_restore_checkpoint() or initalize_state(cfg, model)
+        log_manager.try_restore_checkpoint() or initialize_state(cfg, model)
     )
 
     if (
@@ -119,25 +117,34 @@ def train(cfg: Config):
 
     state = CheckpointState(params, data, opt_state, mcmc_width)
 
+    for step in range(initial_step, cfg.optim.iterations):
+        sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
+        new_data, pmove = pmap_mcmc_step(
+            state.params, state.data, subkey, state.mcmc_width
+        )
+        new_mcmc_width, pmoves = mcmc.update_mcmc_width(
+            step - initial_step,
+            state.mcmc_width,
+            cfg.mcmc.adapt_frequency,
+            pmove,
+            pmoves,
+        )
+        state = state._replace(data=new_data, mcmc_width=new_mcmc_width)
+        sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
+        state, stats = training_step(state, subkey)
+        yield step, state, stats, pmove
+
+
+def train(cfg: Config):
+    init_logging()
+    log_manager = LogManager(cfg)
+    time_start = None  # exclude jit warm up step
+    steps = 0
     last_save_time = time.time()
     killer = GracefulKiller()
     with log_manager.create_writer() as writer:
         writer.hide("kinetic", "potential", "Lz_square")
-        for step in range(initial_step, cfg.optim.iterations):
-            sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
-            new_data, pmove = pmap_mcmc_step(
-                state.params, state.data, subkey, state.mcmc_width
-            )
-            new_mcmc_width, pmoves = mcmc.update_mcmc_width(
-                step - initial_step,
-                state.mcmc_width,
-                cfg.mcmc.adapt_frequency,
-                pmove,
-                pmoves,
-            )
-            state = state._replace(data=new_data, mcmc_width=new_mcmc_width)
-            sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
-            state, stats = training_step(state, subkey)
+        for step, state, stats, pmove in train_loop(cfg, log_manager):
             writer.log(
                 step=str(step),
                 pmove=f"{pmove[0]:.2f}",
@@ -150,21 +157,29 @@ def train(cfg: Config):
                 Lz_square=f"{stats['angular_momentum_z_square'][0]:.4f}",
                 L_square=f"{stats['angular_momentum_square'][0]:.4f}",
             )
+
             current_time = time.time()
+            if time_start is None:
+                time_start = current_time
+            else:
+                steps += 1
+
             if (
-                (
+                jnp.isnan(stats["energy"].real).any()
+                or step == cfg.optim.iterations - 1
+                or killer.kill_now
+                or (
                     current_time - last_save_time > cfg.log.save_time_interval
                     and (step + 1) % cfg.log.save_step_interval == 0
                 )
-                or jnp.isnan(stats["energy"].real).any()
-                or step == cfg.optim.iterations - 1
-                or killer.kill_now
             ):
                 last_save_time = current_time
                 writer.force_flush()
                 log_manager.save_checkpoint(step, state)
             if killer.kill_now or jnp.isnan(stats["energy"].real).any():
                 raise SystemExit("=" * 30 + " ABORT " + "=" * 30)
+    if steps > 0 and time_start is not None:
+        logger.info("Time per step: %.3fs", (current_time - time_start) / steps)
 
 
 class GracefulKiller:
