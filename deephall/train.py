@@ -19,6 +19,7 @@ import time
 from argparse import ArgumentParser
 from typing import cast
 
+import chex
 import jax
 import kfac_jax
 import numpy as np
@@ -212,13 +213,18 @@ def cli(argv: list[str] | None = None) -> None:
         "dotlist", help="path.to.key=value pairs for configuration", nargs="*"
     )
     parser.add_argument("--yml", help="config YML file to merge")
+    parser.add_argument("--debug", help="disable JAX pmap", action="store_true")
     args = parser.parse_args(argv or sys.argv[1:] or ["--help"])
 
     config = OmegaConf.structured(Config)
     if args.yml:
         config = OmegaConf.merge(config, OmegaConf.load(args.yml))
     config = OmegaConf.merge(config, OmegaConf.from_dotlist(args.dotlist))
-    train(Config.from_dict(config))
+    if args.debug:
+        with chex.fake_pmap_and_jit():
+            train(Config.from_dict(config))
+    else:
+        train(Config.from_dict(config))
 
 
 if __name__ == "__main__":
