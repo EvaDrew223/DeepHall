@@ -72,7 +72,14 @@ In the results directory, the file you will need most of the time is `train_stat
 DeepHall contains a `netobs_bridge` module to calculate the pair correlation function, overlap with the Laughlin wavefunction, and the one-body reduced density matrix. With [NetObs](https://github.com/bytedance/netobs) installed:
 
 ```bash
+# Energy
+netobs deephall unused energy --with steps=2000 --net-restore save_path/ckpt_000099.npz --ckpt save_path/energy
+# Overlap
 netobs deephall unused deephall@overlap --with steps=50 --net-restore save_path/ckpt_000099.npz --ckpt save_path/overlap
+# Pair correlation function
+netobs deephall unused deephall@pair_corr --with steps=100000 --net-restore save_path/ckpt_000099.npz --ckpt save_path/pair_corr
+# 1-RDM
+netobs deephall unused deephall@one_rdm --with steps=20000 --net-restore save_path/ckpt_000099.npz --ckpt save_path/1rdm
 ```
 
 ## Adding a New Neural Network Wavefunction
