@@ -10,7 +10,7 @@ Currently, DeepHall supports running simulations with spin-polarized electrons o
 
 ## Installation
 
-DeepHall requires Python 3.11 or higher. It is highly recommended to install DeepHall in a separate virtual environment.
+DeepHall requires Python `>=3.11` and JAX `0.4.35`. It is highly recommended to install DeepHall in a separate virtual environment.
 
 ```bash
 # Remember to activate your virtual environment
@@ -86,10 +86,10 @@ netobs deephall unused deephall@one_rdm --with steps=20000 --net-restore save_pa
 
 To add a custom neural network wavefunction, follow these steps:
 
-### Step 1: Create the Network Implementation 
+### Step 1: Create the Network Implementation
 
 Add a new file in the `deephall/networks/` directory, e.g., `deephall/networks/mynet.py`. You can refer to the existing implementation in `deephall/networks/psiformer.py` as a template.
-     
+
 ### Step 2: Configure the Network
 
 Update the configuration file `deephall/config.py`:
@@ -102,7 +102,7 @@ Update the configuration file `deephall/config.py`:
   ```
 - Add the dataclass to the `Network` config. Include your dataclass in the `Network` configuration by adding a line like:
   ```python
-  
+
   @dataclass
   class Network:
       ...
@@ -121,6 +121,8 @@ Add a construction function in `deephall/networks/__init__.py`. Register your ne
 if network.type == NetworkType.mynet:
     return MyNet(network.mynet.hidden_dim, network.mynet.num_layers)
 ```
+
+For more details, commit [d5dc18c](https://github.com/bytedance/DeepHall/commit/d5dc18c) serves as an example for adding a new network.
 
 ## Citing Our Paper
 
