@@ -15,12 +15,15 @@
 from flax import linen as nn
 
 from deephall.config import Network, NetworkType, System
+from deephall.networks.free import Free
 from deephall.networks.laughlin import Laughlin
 from deephall.networks.psiformer import Psiformer
 
 
 def make_network(system: System, network: Network) -> nn.Module:
     Q = system.flux / 2
+    if network.type == NetworkType.free:
+        return Free(flux=system.flux, nspins=system.nspins)
     if network.type == NetworkType.laughlin:
         return Laughlin(
             flux=system.flux, nspins=system.nspins, excitation_lz=system.lz_center

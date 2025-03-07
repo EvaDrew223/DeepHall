@@ -82,6 +82,7 @@ class System:
 class NetworkType(StrEnum):
     psiformer = "psiformer"
     laughlin = "laughlin"
+    free = "free"
 
 
 class OrbitalType(StrEnum):
