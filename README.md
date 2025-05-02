@@ -1,6 +1,7 @@
 <p align="center">
-  <img src=".github/img/banner.png">
+  <img src=".github/img/deephall.png">
 </p>
+<h1 align="center">DeepHall</h1>
 
 Simulating the fractional quantum Hall effect (FQHE) with neural network variational Monte Carlo.
 
