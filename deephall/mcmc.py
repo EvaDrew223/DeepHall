@@ -64,7 +64,24 @@ def mh_update(
     return x_new, key_new, lp_new, num_accepts
 
 
-def sph_sampling(key: PRNGKey, x1: jnp.ndarray, stddev: float):
+def sph_sampling(key: PRNGKey, x1: jnp.ndarray, stddev: float) -> jnp.ndarray:
+    """Propose electrons MCMC move on the sphere.
+
+    Suppose the electron is at the north pole, similar to the Euclidean Gaussian MCMC
+    proposal, the proposal on the sphere also obeys Gaussian distribution in theta and
+    is symmetric in phi. Of course the real electrons are not at the north pole, but we
+    can always perform a change of coordinates to place the electron of interest to the
+    north pole, generate the proposals in the transformed coordinates (theta'/phi'),
+    and then transform them back to the original coordinates.
+
+    Args:
+        key: Random key
+        x1: Current electrons configuration.
+        stddev: The Gaussian width of the move.
+
+    Returns:
+        New electron configuration.
+    """
     theta, phi = x1[..., 0], x1[..., 1]
     key_theta, key_phi = jax.random.split(key)
     # Assuming the electrons are on the north pole, and work on theta' - phi' coord

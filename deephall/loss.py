@@ -28,6 +28,7 @@ from deephall.types import LogPsiNetwork, LossStats
 
 
 def iqr_clip_real(x: jnp.ndarray, scale=100.0) -> jnp.ndarray:
+    """Clip the observables based on interquartile range (IQR)."""
     q1 = jnp.nanquantile(x, 0.25)
     q3 = jnp.nanquantile(x, 0.75)
     iqr = q3 - q1
@@ -35,6 +36,7 @@ def iqr_clip_real(x: jnp.ndarray, scale=100.0) -> jnp.ndarray:
 
 
 def iqr_clip(x: jnp.ndarray, scale=100.0) -> jnp.ndarray:
+    """Clip complex observables by applying IQR clip on both real and imag parts."""
     return iqr_clip_real(x.real, scale) + 1j * iqr_clip_real(x.imag, scale)
 
 
@@ -47,6 +49,16 @@ class LossMode(enum.Enum):
 def make_loss_fn(
     network: LogPsiNetwork, system: System, mode: LossMode = LossMode.ENERGY_GRAD
 ) -> Callable[[ArrayTree, jnp.ndarray], tuple[LossStats, jnp.ndarray]]:
+    r"""Create the loss function and its gradient for the neural network.
+
+    The loss function is just the sum of the (clipped) average energy and other penalty
+    term. The corresponding gradient with respect to the parameters is evaluated with:
+
+    \frac{\partial}{\partial\alpha}\langle O\rangle = 2\Re[
+        \langle O\frac{\partial}{\partial\alpha}\log\psi\rangle
+        -\langle O\rangle \langle \frac{\partial}{\partial\alpha}\log\psi\rangle
+    ]
+    """
     loss_fn = local_energy(network, system)
     batch_local_energy = jax.vmap(loss_fn, in_axes=(None, 0))
 
