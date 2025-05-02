@@ -81,7 +81,7 @@ def make_potential(
 
 
 def make_local_kinetic_energy(f: LogPsiNetwork, Q: float, r: jnp.ndarray):
-    r"""Creates a function to for the local kinetic energy, -1/2 \nabla^2 ln|f|.
+    r"""Creates a function to for the local kinetic energy.
 
     Args:
         f: Callable which evaluates the log of the magnitude of the wavefunction.
@@ -89,8 +89,12 @@ def make_local_kinetic_energy(f: LogPsiNetwork, Q: float, r: jnp.ndarray):
         r: Sphere radius
 
     Returns:
-        Callable which evaluates the local kinetic energy,
-        -1/2f \nabla^2 f = -1/2 (\nabla^2 log|f| + (\nabla log|f|)^2).
+        Callable that evaluates the local kinetic energy, \frac{|\Lambda|^2 f}{2 R^2 f},
+        where
+            \frac{|\Lambda|^2 f}{f} = -\frac{\nabla^2 f}{f} + (Q \cot \theta)^2
+                + 2i Q \frac{\cot \theta}{\sin \theta} \frac{\partial f}{\partial \phi},
+        and
+            -\frac{\nabla^2 f}{f} = - [\nabla^2 \log f + (\nabla \log f)^2].
     """
 
     def _lapl_over_f(
