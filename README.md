@@ -1,11 +1,11 @@
 <p align="center">
-  <img src=".github/img/deephall.png">
+  <img src=".github/img/deephall.svg" width="200">
 </p>
 <h1 align="center">DeepHall</h1>
 
 Simulating the fractional quantum Hall effect (FQHE) with neural network variational Monte Carlo.
 
-This repository contains the codebase for the paper [Taming Landau level mixing in fractional quantum Hall states with deep learning](https://arxiv.org/abs/2412.14795). If you use this code in your work, please [cite our paper](CITATIONS.bib).
+This repository contains the codebase for the paper [Describing Landau Level Mixing in Fractional Quantum Hall States with Deep Learning](https://doi.org/10.1103/PhysRevLett.134.176503). If you use this code in your work, please [cite our paper](CITATIONS.bib).
 
 Currently, DeepHall supports running simulations with spin-polarized electrons on a sphere and has been tested with 1/3 and 2/5 fillings.
 
@@ -130,17 +130,18 @@ For more details, commit [d5dc18c](https://github.com/bytedance/DeepHall/commit/
 If you use this code in your work, please cite the following paper:
 
 ```bib
-@misc{qian_taming_2024,
-  title = {Taming {{Landau}} Level Mixing in Fractional Quantum {{Hall}} States with Deep Learning},
+@article{PhysRevLett.134.176503,
+  title = {Describing Landau Level Mixing in Fractional Quantum Hall States with Deep Learning},
   author = {Qian, Yubing and Zhao, Tongzhou and Zhang, Jianxiao and Xiang, Tao and Li, Xiang and Chen, Ji},
-  year = {2024},
-  month = dec,
-  number = {arXiv:2412.14795},
-  eprint = {2412.14795},
-  primaryclass = {cond-mat},
-  publisher = {arXiv},
-  doi = {10.48550/arXiv.2412.14795},
-  urldate = {2024-12-23},
-  archiveprefix = {arXiv}
+  journal = {Phys. Rev. Lett.},
+  volume = {134},
+  issue = {17},
+  pages = {176503},
+  numpages = {8},
+  year = {2025},
+  month = {Apr},
+  publisher = {American Physical Society},
+  doi = {10.1103/PhysRevLett.134.176503},
+  url = {https://link.aps.org/doi/10.1103/PhysRevLett.134.176503}
 }
 ```
