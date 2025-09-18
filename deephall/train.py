@@ -39,7 +39,8 @@ logger = logging.getLogger("deephall")
 
 
 def init_guess(key: PRNGKey, batch: int, nelec: int):
-    """Create uniform samples on the sphere.
+    """Initialize electron positions (theta, phi) on the sphere.
+       Create uniform samples on the sphere.
 
     Args:
         key: random key.
@@ -59,6 +60,7 @@ def initialize_state(cfg: Config, model: nn.Module):
     key_data, key_params = jax.random.split(jax.random.PRNGKey(cfg.seed))
     data = init_guess(key_data, cfg.batch_size, sum(cfg.system.nspins))
     data = data.reshape((jax.device_count(), -1, *data.shape[-2:]))
+    # Initialize  model params
     params = kfac_jax.utils.replicate_all_local_devices(
         model.init(key_params, data[0, 0])
     )
@@ -79,11 +81,15 @@ def setup_mcmc(cfg: Config, network: LogPsiNetwork):
 
 
 def train_loop(cfg: Config, log_manager: LogManager):
+    # Build the model and callable
     model = make_network(cfg.system, cfg.network)
     network = cast(LogPsiNetwork, model.apply)
+    # Set up MCMC sampling
     pmap_mcmc_step, pmoves = setup_mcmc(cfg, network)
+    # Set up optimizer
     opt_init, training_step = optimizers.make_optimizer_step(cfg, network)
 
+    # Initialize randomness and state
     key = jax.random.PRNGKey(cfg.seed)
     sharded_key = kfac_jax.utils.make_different_rng_key_on_all_devices(key)
     initial_step, (params, data, opt_state, mcmc_width) = (
@@ -103,6 +109,7 @@ def train_loop(cfg: Config, log_manager: LogManager):
 
     logger.info("Start VMC with %s JAX devices", jax.device_count())
 
+    # Burn-in MCMC (first run only)
     if initial_step == 0:
         for _ in range(cfg.mcmc.burn_in):
             sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
@@ -118,11 +125,16 @@ def train_loop(cfg: Config, log_manager: LogManager):
 
     state = CheckpointState(params, data, opt_state, mcmc_width)
 
+    # Training loop
     for step in range(initial_step, cfg.optim.iterations):
+        # 1) Sample new electron configurations
+        # 1.1) Split RNG per device
         sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
+        # 1.2) Run one MCMC block
         new_data, pmove = pmap_mcmc_step(
             state.params, state.data, subkey, state.mcmc_width
         )
+        # 2) Adapt MCMC step size
         new_mcmc_width, pmoves = mcmc.update_mcmc_width(
             step - initial_step,
             state.mcmc_width,
@@ -130,8 +142,12 @@ def train_loop(cfg: Config, log_manager: LogManager):
             pmove,
             pmoves,
         )
+        # 2.2) Update state with the new data and width
         state = state._replace(data=new_data, mcmc_width=new_mcmc_width)
+        # 3) Take an optimization step
+        # 3.1) Split RNG again
         sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
+        # 3.2) Compute loss/gradients and update params/opt state, Receive stats (energy, kinetic, potential, variances, angular momenta)
         state, stats = training_step(state, subkey)
         yield step, state, stats, pmove
 
@@ -145,6 +161,7 @@ def train(cfg: Config):
     killer = GracefulKiller()
     with log_manager.create_writer() as writer:
         writer.hide("kinetic", "potential", "Lz_square")
+        # updated state (params, samples, optimizer state, MCMC width), stats (observables), and pmove (acceptance ratio)
         for step, state, stats, pmove in train_loop(cfg, log_manager):
             writer.log(
                 step=str(step),

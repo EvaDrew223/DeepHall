@@ -22,6 +22,7 @@ T = TypeVar("T")
 
 def from_dict(cls: type[T], dikt: dict[str, Any]) -> T:
     """Restore dataclass from a OmegaConf dictionary.
+       Converts a dictionary (from command line or YAML) into a dataclass.
 
     Args:
         cls: The class of the dataclass
