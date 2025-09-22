@@ -82,7 +82,7 @@ def setup_mcmc(cfg: Config, network: LogPsiNetwork):
 
 def train_loop(cfg: Config, log_manager: LogManager):
     # Build the model and callable
-    model = make_network(cfg.system, cfg.network)
+    model = make_network(cfg.system, cfg.network) # creates a Flax neural network module based on configuration
     network = cast(LogPsiNetwork, model.apply)
     # Set up MCMC sampling
     pmap_mcmc_step, pmoves = setup_mcmc(cfg, network)
@@ -90,7 +90,7 @@ def train_loop(cfg: Config, log_manager: LogManager):
     opt_init, training_step = optimizers.make_optimizer_step(cfg, network)
 
     # Initialize randomness and state
-    key = jax.random.PRNGKey(cfg.seed)
+    key = jax.random.PRNGKey(cfg.seed) # Creates JAX random keys for reproducible randomness
     sharded_key = kfac_jax.utils.make_different_rng_key_on_all_devices(key)
     initial_step, (params, data, opt_state, mcmc_width) = (
         log_manager.try_restore_checkpoint() or initialize_state(cfg, model)

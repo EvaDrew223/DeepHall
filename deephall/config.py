@@ -202,7 +202,7 @@ class Log:
 
 @dataclass
 class Config:
-    batch_size: int = 3360  # 32*3*5*7
+    batch_size: int = 3360  # 32*3*5*7, number of electron configurations (samples)
     seed: int = field(default_factory=lambda: int(time.time()))
     system: System = field(default_factory=System)
     network: Network = field(default_factory=Network)
