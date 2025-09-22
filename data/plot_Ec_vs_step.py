@@ -1,0 +1,49 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+Q = 21/2
+N = 8
+kappa = 1
+nu = 1/3
+
+csv_path = (Path(__file__).parent / "DeepHall_n8l21" / "train_stats.csv")
+df = pd.read_csv(csv_path)
+
+# Ensure numeric types
+steps = df["step"].astype(int).to_numpy()
+energy = df["energy"].astype(float).to_numpy()
+
+window = 500
+smoothed = np.empty_like(energy, dtype=float)
+
+for i in range(len(energy)):
+    start = max(0, i - window + 1)
+    w = energy[start:i + 1]
+    # IQR-based outlier removal within the window
+    q1 = np.nanpercentile(w, 25)
+    q3 = np.nanpercentile(w, 75)
+    iqr = q3 - q1
+    low = q1 - 1.5 * iqr
+    high = q3 + 1.5 * iqr
+    w_filtered = w[(w >= low) & (w <= high)]
+    if w_filtered.size == 0:
+        w_filtered = w  # fallback if all were filtered
+    smoothed[i] = np.nanmean(w_filtered)
+
+# %%
+smoothed_plot = (smoothed/np.sqrt(Q) - N**2/2/np.sqrt(Q) - N/2/kappa) * np.sqrt(2*Q*nu/N) / N # N/2/kappa
+
+plt.figure(figsize=(8, 7))
+# plt.plot(steps, energy, color="lightgray", linewidth=1, label="raw energy")
+plt.plot(steps, smoothed_plot, color="C0", linewidth=2, label=f"moving avg (window={window}, IQR outliers removed)")
+plt.ylim(np.min(smoothed_plot)-0.0003, np.min(smoothed_plot)+0.0022)
+plt.xlim(-5000, 200000)
+plt.xlabel("step")
+plt.ylabel(r"$E_c/N\hbar\omega_c \kappa$", fontsize=18)
+plt.title("Energy vs. Step (smoothed)")
+plt.legend()
+plt.tight_layout()
+plt.show()
+# %%
