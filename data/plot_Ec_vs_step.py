@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from matplotlib import rcParams
+rcParams['mathtext.fontset'] = 'cm'
+rcParams['font.family'] = 'STIXGeneral'
 
 Q = 21/2
 N = 8
@@ -33,17 +36,29 @@ for i in range(len(energy)):
     smoothed[i] = np.nanmean(w_filtered)
 
 # %%
-smoothed_plot = (smoothed/np.sqrt(Q) - N**2/2/np.sqrt(Q) - N/2/kappa) * np.sqrt(2*Q*nu/N) / N # N/2/kappa
+smoothed_plot = (smoothed - N**2/2/np.sqrt(Q) - N/2/kappa) * np.sqrt(2*Q*nu/N) / N # N/2/kappa
 
 plt.figure(figsize=(8, 7))
 # plt.plot(steps, energy, color="lightgray", linewidth=1, label="raw energy")
 plt.plot(steps, smoothed_plot, color="C0", linewidth=2, label=f"moving avg (window={window}, IQR outliers removed)")
-plt.ylim(np.min(smoothed_plot)-0.0003, np.min(smoothed_plot)+0.0022)
+plt.ylim(-0.4115-0.0004, -0.4095+0.0001)
 plt.xlim(-5000, 200000)
-plt.xlabel("step")
+ax = plt.gca()
+# Major ticks from -0.4115 to -0.4095 with step 0.0005
+major_ticks_y = np.arange(-0.4115, -0.4095 + 1e-12, 0.0005)
+ax.set_yticks(major_ticks_y)
+ax.tick_params(axis='y', which='major', width=1.5, length=5)
+# Minor ticks from -0.4115 to -0.4095 with step 0.0001
+minor_ticks_y = np.arange(-0.4115-0.0004, -0.4095 + 1e-12, 0.0001)
+ax.set_yticks(minor_ticks_y, minor=True)
+major_ticks_x = np.arange(0, 200000+1, 100000)
+ax.set_xticks(major_ticks_x)
+ax.tick_params(axis='x', which='major', width=1.5, length=5)
+minor_ticks_x = np.arange(0, 200000+ 1e-12, 20000)
+ax.set_xticks(minor_ticks_x, minor=True)
+ax.tick_params(axis='both', which='both', labelsize=18)
+plt.xlabel("training step", fontsize=18)
 plt.ylabel(r"$E_c/N\hbar\omega_c \kappa$", fontsize=18)
-plt.title("Energy vs. Step (smoothed)")
-plt.legend()
 plt.tight_layout()
 plt.show()
 # %%
