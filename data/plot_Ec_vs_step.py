@@ -59,6 +59,7 @@ ax.set_xticks(minor_ticks_x, minor=True)
 ax.tick_params(axis='both', which='both', labelsize=18)
 plt.xlabel("training step", fontsize=18)
 plt.ylabel(r"$E_c/N\hbar\omega_c \kappa$", fontsize=18)
+plt.title("NN layers = 2", fontsize=18)
 plt.tight_layout()
-plt.show()
+plt.savefig("Ec_vs_step_NN2l.png", dpi=300)
 # %%
