@@ -109,6 +109,11 @@ def train_loop(cfg: Config, log_manager: LogManager):
 
     logger.info("Start VMC with %s JAX devices", jax.device_count())
 
+    # Initialize monitoring
+    from deephall.monitoring import VMC_Monitor
+    mcmc_stats_path = log_manager.save_path / "mcmc_stats.csv"
+    monitor = VMC_Monitor(window_size=100, output_file=str(mcmc_stats_path))
+
     # Burn-in MCMC (first run only)
     if initial_step == 0:
         for _ in range(cfg.mcmc.burn_in):
@@ -149,6 +154,17 @@ def train_loop(cfg: Config, log_manager: LogManager):
         sharded_key, subkey = kfac_jax.utils.p_split(sharded_key)
         # 3.2) Compute loss/gradients and update params/opt state, Receive stats (energy, kinetic, potential, variances, angular momenta)
         state, stats = training_step(state, subkey)
+
+        # Update monitoring
+        monitor.update(stats['energy'].real[0], pmove[0])
+        
+        # Log statistics every 100 steps
+        if step % 100 == 0:
+            stats_dict = monitor.get_statistics()
+            if stats_dict:
+                logger.info(f"Step {step}: {stats_dict}")
+            # Save to CSV file
+            monitor.log_statistics(step)
         yield step, state, stats, pmove
 
 
