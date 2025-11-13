@@ -58,6 +58,7 @@ class OverlapEstimator(Estimator[HallSystem]):
         del i, aux_data, key
         logpsi = self.batch_network(params, data, system)
         logphi = self.batch_laughlin(params, data)
+        print(f"logpsi dtype: {logpsi.dtype}")
         shift = jnp.mean(logphi - logpsi)
         ratio = jnp.exp(logphi - logpsi - shift)
         return {"ratio": ratio, "ratio_square": jnp.abs(ratio) ** 2}, state

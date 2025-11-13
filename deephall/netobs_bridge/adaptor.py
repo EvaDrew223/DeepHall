@@ -36,7 +36,7 @@ class DeepHallAuxData(TypedDict):
 
 
 @register_pytree_node_class
-class DeepHallAdaptor(NetworkAdaptor[HallSystem]):
+class DeepHallAdaptor(NetworkAdaptor[HallSystem]): # inherits from NetworkAdaptor (from netobs.adaptors)
     def __init__(self, config: Any, args: list[str]) -> None:
         super().__init__(config, args)
 
@@ -63,7 +63,7 @@ class DeepHallAdaptor(NetworkAdaptor[HallSystem]):
             HallSystem(spins=list(cfg.system.nspins), ndim=2, flux=cfg.system.flux),
             DeepHallAuxData(mcmc_width=state.mcmc_width),
         )
-
+    
     def call_signed_network(
         self, params: jnp.ndarray, electrons: jnp.ndarray, system: HallSystem
     ):
